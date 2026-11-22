@@ -1,0 +1,6 @@
+/* JUST FRIENDS — TEN REASONS v1.1.0 — OUTPUT */
+const modifier = (text) => {
+  // Leave narration intact; no public debug tags or scripted dialogue.
+  return { text };
+};
+modifier(text);
