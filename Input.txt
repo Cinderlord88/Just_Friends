@@ -1,0 +1,7 @@
+/* JUST FRIENDS — TEN REASONS v1.1.0 — INPUT */
+const modifier = (text) => {
+  // Initialize once per fresh adventure. Never alter what the player types.
+  JF11_select();
+  return { text };
+};
+modifier(text);
