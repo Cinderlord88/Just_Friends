@@ -1,6 +1,7 @@
-/* JUST FRIENDS — TEN REASONS v1.1.0 — OUTPUT */
+/* JUST FRIENDS — v1.2.0 OUTPUT: re-prime memory for next turn. */
 const modifier = (text) => {
-  // Leave narration intact; no public debug tags or scripted dialogue.
+  // Especially useful when another attached script altered shared memory.
+  JF12_prepare();
   return { text };
 };
 modifier(text);
