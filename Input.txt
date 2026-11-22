@@ -1,7 +1,6 @@
-/* JUST FRIENDS — TEN REASONS v1.1.0 — INPUT */
+/* JUST FRIENDS — v1.2.0 INPUT: inject BEFORE prompt assembly. */
 const modifier = (text) => {
-  // Initialize once per fresh adventure. Never alter what the player types.
-  JF11_select();
+  JF12_prepare();
   return { text };
 };
 modifier(text);
