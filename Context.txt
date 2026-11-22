@@ -1,0 +1,8 @@
+/* JUST FRIENDS — TEN REASONS v1.1.0 — CONTEXT */
+const modifier = (text) => {
+  const selected = JF11_select();
+  if (selected) JF11_applyMemory(selected);
+  // The cue is supplied through frontMemory, not a context-text rewrite.
+  return { text };
+};
+modifier(text);
