@@ -1,0 +1,152 @@
+/*
+  JUST FRIENDS — TEN REASONS v1.1.0
+  AI Dungeon LIBRARY tab. No dependencies.
+
+  One hidden, sympathetic complication is chosen for each NEW adventure.
+  JavaScript preserves its facts; the narrator determines dialogue and outcomes.
+  Before installing, back up any existing built-in script tabs. If Small Moments
+  is separately attached, keep its toggle OFF for a script-isolation experiment.
+*/
+
+var JF11_CONFIG = {
+  forceVariant: 0,             // 0 = random; 1..10 = forced for NEW QA adventure only
+  debug: false,                // Logs selection to creator console (never to players)
+  protectOldAdventures: true  // Do not inject a new secret into a developed adventure
+};
+
+var JF11_VARIANTS = [
+  {
+    id: 1, title: 'A possible pregnancy', maleOnly: true,
+    fact: 'Five days ago Nina had a positive home pregnancy test. She has not yet had clinical confirmation. The timing may make the adult male player a potential father, but neither paternity nor their past sexual history is established by this cue.',
+    reason: 'She is frightened about the uncertain future and about the group noticing they are together before she can tell the player privately. She regrets denying their relationship; it was not a calculated attempt to hide it from him.',
+    next: 'A truthful private disclosure, a possible follow-up medical appointment, and discussion of boundaries, support, and what each person wants. Do not assert paternity, dictate medical decisions, or treat pregnancy as a demand for reconciliation.'
+  },
+  {
+    id: 2, title: 'Lydia has loved the player', maleOnly: false,
+    fact: 'Two days ago Lydia privately confessed to Nina that she has had romantic feelings for the player for years. Nina did not know this when she began dating the player four months ago. Lydia does NOT know the couple are together.',
+    reason: 'Nina was blindsided by Evan asking about the relationship at Lydia\'s own birthday. She feared humiliating her oldest friend publicly and reflexively denied the romance. She loves the player and knows that denial was unfair.',
+    next: 'Nina and the player can decide how to be truthful and considerate toward Lydia without treating her feelings as anyone\'s property. Lydia can respond independently; no one is forced to surrender a relationship.'
+  },
+  {
+    id: 3, title: 'Uncertain fertility news', maleOnly: false,
+    fact: 'Nina recently received an inconclusive medical result and was advised to seek further evaluation concerning possible fertility difficulties. She has NOT been diagnosed as infertile. A follow-up consultation is scheduled next week. The player\'s wishes about children are unknown.',
+    reason: 'Nina is scared about what this could mean for the future she has begun imagining and fears rejection before she has even told the player. She reacted to Evan\'s public pressure with a shame-driven denial.',
+    next: 'She can share what is known and unknown, talk about hopes and boundaries, and decide whether she wants company at the appointment. Avoid medical certainty, pregnancy assumptions, and claims about what the player wants.'
+  },
+  {
+    id: 4, title: 'Family caregiving', maleOnly: false,
+    fact: 'Nina\'s mother is recovering after a difficult but nonterminal operation. Nina has recently become the main person coordinating appointments and help at home, with another demanding month ahead.',
+    reason: 'She fears she cannot be as available as a serious partner should be. When Evan pressed for a public label she panicked about expectations and denied the bond rather than admit she needed help.',
+    next: 'Discuss realistic time, independent choices, practical support if freely offered, and family boundaries. Nina must apologize for the denial without turning the player into an obligated caretaker.'
+  },
+  {
+    id: 5, title: 'An offer out of town', maleOnly: false,
+    fact: 'Nina was offered a six-month professional placement in another city. She has not accepted it; her answer is due in three days. She has not yet told the player because she wanted to discuss the possibilities privately.',
+    reason: 'Evan\'s teasing felt like being asked to define a shared future in front of the group before she could disclose a choice affecting that future. She reflexively denied the relationship and immediately regretted it.',
+    next: 'An honest talk about the offer, the possibility of long-distance dating, career wishes, and what neither partner should be required to sacrifice. The player\'s plans are not predetermined.'
+  },
+  {
+    id: 6, title: 'An old public breakup', maleOnly: false,
+    fact: 'Two years ago Nina\'s previous relationship within a wider friend circle ended publicly and painfully. Friends took sides, and she lost several friendships. Her former partner is NOT part of the current birthday group and is not secretly pursuing her.',
+    reason: 'Evan\'s teasing recreated the feeling of becoming the friend group\'s entertainment. She panicked and denied the relationship despite genuinely wanting it.',
+    next: 'The couple can choose their own disclosure timing and set boundaries around group commentary. Nina must take responsibility for the denial. The next group get-together gives a modest, concrete chance to handle things better.'
+  },
+  {
+    id: 7, title: 'She was going to say I love you', maleOnly: false,
+    fact: 'Nina has realized she is in love with the player. She planned to tell the player privately after Lydia\'s birthday and had arranged a quiet dinner tomorrow to talk about taking their relationship more openly and seriously.',
+    reason: 'She was already intensely vulnerable and felt as if Evan\'s public joke was stealing a conversation she wanted to have herself. Her reflexive denial betrayed the very feeling she intended to express.',
+    next: 'A sincere apology, a private first declaration if Nina chooses to make it, and a discussion about what going public would mean. Do not presume the player returns her feelings or accepts a commitment.'
+  },
+  {
+    id: 8, title: 'An estranged parent returns', maleOnly: false,
+    fact: 'Nina\'s estranged father has unexpectedly asked to see her next weekend after years of limited contact. He has previously disregarded Nina\'s privacy by sharing sensitive personal details without permission. Nina has not decided whether to meet him.',
+    reason: 'She is anxious about her personal life becoming public while she considers the request. Evan\'s teasing triggered a reflex to protect the relationship from more unwanted scrutiny.',
+    next: 'Nina can explain the family history, decide on boundaries for any meeting, and discuss what privacy and support look like. No reunion with her father or involvement by the player is mandatory.'
+  },
+  {
+    id: 9, title: 'Her apartment may be lost', maleOnly: false,
+    fact: 'Nina learned yesterday that her landlord intends to sell her building. She may need a new place within six weeks, depending on the lease and local rules; she does not yet have a firm solution.',
+    reason: 'She is afraid a public relationship announcement will make it seem she is looking to the player for housing or financial rescue. Under public pressure she denied something she actually values.',
+    next: 'A conversation about pride, independence, and realistic housing options. The player may offer help or decline; Nina is not manipulating anyone for a home, and they need not move in together.'
+  },
+  {
+    id: 10, title: 'A privacy misunderstanding with Sophie', maleOnly: false,
+    fact: 'Earlier today Sophie warned Nina that Evan suspected the relationship and might joke about it at the party. Nina misread the warning as proof Sophie had told him. In truth, Sophie kept their confidence; Evan only noticed ordinary affection.',
+    reason: 'Nina arrived upset and already afraid of losing control of private news. She felt cornered, denied the relationship, and immediately saw that her fear hurt the player.',
+    next: 'Nina should acknowledge her mistake, clarify with Sophie without accusing her, and work out respectful disclosure boundaries with the player. The friendships should not be destroyed by a simple misunderstanding.'
+  }
+];
+
+function JF11_gender() {
+  var items = (typeof state !== 'undefined' && Array.isArray(state.placeholders)) ? state.placeholders : [];
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i] || {};
+    var q = String(item.question || '').toLowerCase().trim();
+    if (q === 'character.gender' || /\bgender\b/.test(q)) {
+      var a = String(item.answer || '').toLowerCase().trim();
+      if (a === 'male' || a === 'female') return a;
+    }
+  }
+  return 'unknown';
+}
+
+function JF11_getVariant(id) {
+  for (var i = 0; i < JF11_VARIANTS.length; i++) {
+    if (JF11_VARIANTS[i].id === id) return JF11_VARIANTS[i];
+  }
+  return null;
+}
+
+function JF11_eligible(v, gender) {
+  return !v.maleOnly || gender === 'male';
+}
+
+function JF11_select() {
+  if (state.jf11 && state.jf11.disabled) return null;
+  if (state.jf11 && JF11_getVariant(state.jf11.variantId)) {
+    return JF11_getVariant(state.jf11.variantId);
+  }
+
+  var actionCount = (typeof info !== 'undefined' && typeof info.actionCount === 'number') ? info.actionCount : 0;
+  if (JF11_CONFIG.protectOldAdventures && actionCount > 2) {
+    state.jf11 = { version: '1.1.0', disabled: true, reason: 'existing adventure' };
+    return null;
+  }
+
+  var gender = JF11_gender();
+  var eligible = JF11_VARIANTS.filter(function (v) { return JF11_eligible(v, gender); });
+  var forced = JF11_getVariant(Number(JF11_CONFIG.forceVariant));
+  var chosen = (forced && JF11_eligible(forced, gender)) ? forced :
+    eligible[Math.floor(Math.random() * eligible.length)];
+
+  state.jf11 = { version: '1.1.0', variantId: chosen.id, genderAtSelection: gender };
+  if (JF11_CONFIG.debug && typeof log === 'function') {
+    log('[JF11] variant ' + chosen.id + ': ' + chosen.title);
+  }
+  return chosen;
+}
+
+function JF11_cue(v) {
+  return [
+    '[JUST FRIENDS — PRIVATE STORY FACTS v1.1; for narrator, not player]',
+    'ONE randomly chosen explanation applies for this entire adventure. Never combine variants or silently substitute a different secret.',
+    'Nina Williams and the adult player have been genuinely dating exclusively for four months. She cares for the player and is NOT ashamed of them, using them, or pursuing another partner. Her words "We\'re just friends" were an impulsive mistake, not a breakup.',
+    'HIDDEN FACT: ' + v.fact,
+    'WHY SHE PANICKED: ' + v.reason,
+    'SECOND ACT: ' + v.next,
+    'PACING: Lydia\'s birthday party is ENDING in the opening. Nina can speak privately IMMEDIATELY. When the player asks why she said it, asks for the truth, or agrees to talk, Nina must give the genuine selected explanation in that reply; no prolonged evasions. Do not automatically absolve her; let the unresolved practical or social issue give a few meaningful follow-up choices.',
+    'AGENCY: Never dictate the player\'s feelings, goals, sexual history, consent, reply, or forgiveness. Reconciliation must remain genuinely possible, and rejection equally permissible. Only Sophie knows the relationship at the start; other friends know only what they witnessed or were told.'
+  ].join('\n');
+}
+
+function JF11_applyMemory(v) {
+  // frontMemory is a documented scripting slot and works without rewriting the
+  // assembled context text. Replace ONLY our own block; preserve other scripts.
+  var begin = '[JF11_BEGIN]';
+  var end = '[JF11_END]';
+  state.memory = state.memory || {};
+  var old = typeof state.memory.frontMemory === 'string' ? state.memory.frontMemory : '';
+  var clean = old.replace(/\[JF11_BEGIN\][\s\S]*?\[JF11_END\]/g, '').trim();
+  var block = begin + '\n' + JF11_cue(v) + '\n' + end;
+  state.memory.frontMemory = clean ? clean + '\n\n' + block : block;
+}
