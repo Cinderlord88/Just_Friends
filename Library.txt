@@ -1,20 +1,19 @@
 /*
-  JUST FRIENDS — TEN REASONS v1.1.0
-  AI Dungeon LIBRARY tab. No dependencies.
-
-  One hidden, sympathetic complication is chosen for each NEW adventure.
-  JavaScript preserves its facts; the narrator determines dialogue and outcomes.
-  Before installing, back up any existing built-in script tabs. If Small Moments
-  is separately attached, keep its toggle OFF for a script-isolation experiment.
+  JUST FRIENDS — TEN POSSIBLE TRUTHS v1.2.0 HOTFIX
+  Built-in AI Dungeon Library script. Replace v1.1, do not append.
+  Repairs: pre-context secret delivery, early-guard false disable,
+  compact cues, backward-compatible state, and multi-hook fallback.
+  Never expose the selected secret through state.message.
 */
-
-var JF11_CONFIG = {
-  forceVariant: 0,             // 0 = random; 1..10 = forced for NEW QA adventure only
-  debug: false,                // Logs selection to creator console (never to players)
-  protectOldAdventures: true  // Do not inject a new secret into a developed adventure
+var JF12_CONFIG = {
+  forceVariant: 0,           // 0 random; 1-10 forced only in PRIVATE QA
+  debug: false,              // Console diagnostics for creator
+  protectEstablished: true,  // Avoid newly introducing a truth to mature old adventures
+  establishedAfter: 15,      // First activation beyond this count gets no NEW selection
+  contextTailFallback: true // Only if assembled context lacks the cue and has space
 };
 
-var JF11_VARIANTS = [
+var JF12_VARIANTS = [
   {
     id: 1, title: 'A possible pregnancy', maleOnly: true,
     fact: 'Five days ago Nina had a positive home pregnancy test. She has not yet had clinical confirmation. The timing may make the adult male player a potential father, but neither paternity nor their past sexual history is established by this cue.',
@@ -77,76 +76,106 @@ var JF11_VARIANTS = [
   }
 ];
 
-function JF11_gender() {
+var JF12_COMPACT = [
+  'Nina recently had a positive home pregnancy test, unconfirmed medically. The adult male player might be a father; paternity is NOT established. She panicked at public scrutiny and regrets denying the bond. When asked, reveal this promptly; discuss uncertainty, support and choices without forcing parenthood or reconciliation.',
+  "Two days ago Lydia confided she's loved the player for years, unaware Nina and the player have dated four months. Nina panicked at outing the romance at Lydia's birthday and hurt the player. When asked, tell the truth promptly; the couple can discuss being honest with Lydia without forcing anyone to break up.",
+  "Nina got inconclusive news about possible fertility problems; further testing is scheduled, and infertility is NOT diagnosed. She fears the player might reject her, so she panicked under Evan's question. Reveal honestly when asked. The couple can talk about fear and the unknown future; don't presume the player wants children.",
+  "Nina's mother is recovering from a difficult, nonterminal operation; Nina is managing care and fears she cannot be a good partner. Evan's public question triggered panic, not shame about the player. Reveal when asked; discuss time, support and boundaries. She regrets denying their relationship and owes an apology.",
+  "Nina has an offer for a six-month job placement in another city; the answer is due in three days and she hasn't accepted it. Evan's question made her panic about defining a future publicly before telling the player. Reveal when asked; let the couple discuss long-distance choices without coerced sacrifice.",
+  "A previous breakup inside another friend circle cost Nina several friendships after public gossip. Evan's teasing triggered fear of repeating it. She does want this relationship and regrets denying it. Reveal when asked; allow an apology, a joint plan for telling friends and realistic boundaries with the group.",
+  "Nina has realized she's in love with the player and planned to say so privately after Lydia's birthday, with a quiet dinner tomorrow. Evan's question stole that intimate moment; she panicked and denied the relationship. Reveal when asked; allow a heartfelt apology and confession without presuming the player returns it.",
+  "Nina's estranged father has asked to meet next weekend. He used to share her private affairs without consent; she fears another public exposure. Evan's question triggered defensive panic, not a lack of love. Explain when asked; let Nina decide family boundaries and accept the player's separate choices.",
+  'Nina learned her landlord plans to sell her building and she might need housing within six weeks; her options remain uncertain. She feared announcing the relationship would look like asking the player for rescue. She panicked and regrets the denial. Reveal when asked; explore realistic independent housing choices.',
+  "Sophie warned Nina that Evan suspected the relationship. Nina wrongly thought Sophie had told him, but Sophie kept their confidence. Already upset, Nina panicked at Evan's question. Reveal when asked and apologize; let the couple and Sophie resolve the misunderstanding without a new betrayal."
+];
+
+
+function JF12_variant(id) {
+  for (var i = 0; i < JF12_VARIANTS.length; i++)
+    if (JF12_VARIANTS[i].id === id) return JF12_VARIANTS[i];
+  return null;
+}
+function JF12_gender() {
   var items = (typeof state !== 'undefined' && Array.isArray(state.placeholders)) ? state.placeholders : [];
   for (var i = 0; i < items.length; i++) {
     var item = items[i] || {};
-    var q = String(item.question || '').toLowerCase().trim();
-    if (q === 'character.gender' || /\bgender\b/.test(q)) {
-      var a = String(item.answer || '').toLowerCase().trim();
-      if (a === 'male' || a === 'female') return a;
-    }
+    var q = String(item.question || '').toLowerCase();
+    var a = String(item.answer || '').toLowerCase().trim();
+    if (/gender/.test(q) && (a === 'male' || a === 'female')) return a;
   }
   return 'unknown';
 }
-
-function JF11_getVariant(id) {
-  for (var i = 0; i < JF11_VARIANTS.length; i++) {
-    if (JF11_VARIANTS[i].id === id) return JF11_VARIANTS[i];
-  }
-  return null;
+function JF12_log(message) {
+  if (JF12_CONFIG.debug && typeof log === 'function') log('[JF12] ' + message);
 }
-
-function JF11_eligible(v, gender) {
-  return !v.maleOnly || gender === 'male';
-}
-
-function JF11_select() {
-  if (state.jf11 && state.jf11.disabled) return null;
-  if (state.jf11 && JF11_getVariant(state.jf11.variantId)) {
-    return JF11_getVariant(state.jf11.variantId);
+function JF12_select() {
+  if (!state || typeof state !== 'object') return null;
+  var saved = state.jf11;
+  // Preserve previously selected variants even in pre-hotfix adventures.
+  if (saved && JF12_variant(Number(saved.variantId))) {
+    saved.version = '1.2.0';
+    if (saved.disabled) delete saved.disabled;
+    return JF12_variant(Number(saved.variantId));
   }
-
-  var actionCount = (typeof info !== 'undefined' && typeof info.actionCount === 'number') ? info.actionCount : 0;
-  if (JF11_CONFIG.protectOldAdventures && actionCount > 2) {
-    state.jf11 = { version: '1.1.0', disabled: true, reason: 'existing adventure' };
+  var count = (typeof info !== 'undefined' && info && typeof info.actionCount === 'number') ? info.actionCount : 0;
+  // v1.1 permanently disabled the script after 2 actions. Do not copy that
+  // behavior: allow late first activation in the opening, but avoid injecting
+  // a brand-new secret into mature pre-existing adventures.
+  if (JF12_CONFIG.protectEstablished && count > JF12_CONFIG.establishedAfter) {
+    JF12_log('no previous choice and actionCount=' + count + ': keeping mature adventure untouched');
     return null;
   }
-
-  var gender = JF11_gender();
-  var eligible = JF11_VARIANTS.filter(function (v) { return JF11_eligible(v, gender); });
-  var forced = JF11_getVariant(Number(JF11_CONFIG.forceVariant));
-  var chosen = (forced && JF11_eligible(forced, gender)) ? forced :
+  var gender = JF12_gender();
+  var eligible = JF12_VARIANTS.filter(function (v) { return !v.maleOnly || gender === 'male'; });
+  var forced = JF12_variant(Number(JF12_CONFIG.forceVariant));
+  var chosen = (forced && (!forced.maleOnly || gender === 'male')) ? forced :
     eligible[Math.floor(Math.random() * eligible.length)];
-
-  state.jf11 = { version: '1.1.0', variantId: chosen.id, genderAtSelection: gender };
-  if (JF11_CONFIG.debug && typeof log === 'function') {
-    log('[JF11] variant ' + chosen.id + ': ' + chosen.title);
-  }
+  if (!chosen) return null;
+  state.jf11 = { version: '1.2.0', variantId: chosen.id, genderAtSelection: gender };
+  JF12_log('selected ' + chosen.id + ': ' + chosen.title);
   return chosen;
 }
-
-function JF11_cue(v) {
-  return [
-    '[JUST FRIENDS — PRIVATE STORY FACTS v1.1; for narrator, not player]',
-    'ONE randomly chosen explanation applies for this entire adventure. Never combine variants or silently substitute a different secret.',
-    'Nina Williams and the adult player have been genuinely dating exclusively for four months. She cares for the player and is NOT ashamed of them, using them, or pursuing another partner. Her words "We\'re just friends" were an impulsive mistake, not a breakup.',
-    'HIDDEN FACT: ' + v.fact,
-    'WHY SHE PANICKED: ' + v.reason,
-    'SECOND ACT: ' + v.next,
-    'PACING: Lydia\'s birthday party is ENDING in the opening. Nina can speak privately IMMEDIATELY. When the player asks why she said it, asks for the truth, or agrees to talk, Nina must give the genuine selected explanation in that reply; no prolonged evasions. Do not automatically absolve her; let the unresolved practical or social issue give a few meaningful follow-up choices.',
-    'AGENCY: Never dictate the player\'s feelings, goals, sexual history, consent, reply, or forgiveness. Reconciliation must remain genuinely possible, and rejection equally permissible. Only Sophie knows the relationship at the start; other friends know only what they witnessed or were told.'
-  ].join('\n');
+function JF12_cue(v) {
+  return '[JF12_BEGIN]\n' + JF12_COMPACT[v.id - 1] + '\n[JF12_END]';
 }
-
-function JF11_applyMemory(v) {
-  // frontMemory is a documented scripting slot and works without rewriting the
-  // assembled context text. Replace ONLY our own block; preserve other scripts.
-  var begin = '[JF11_BEGIN]';
-  var end = '[JF11_END]';
+function JF12_memory(v) {
+  if (!v) return;
   state.memory = state.memory || {};
-  var old = typeof state.memory.frontMemory === 'string' ? state.memory.frontMemory : '';
-  var clean = old.replace(/\[JF11_BEGIN\][\s\S]*?\[JF11_END\]/g, '').trim();
-  var block = begin + '\n' + JF11_cue(v) + '\n' + end;
-  state.memory.frontMemory = clean ? clean + '\n\n' + block : block;
+  var before = typeof state.memory.frontMemory === 'string' ? state.memory.frontMemory : '';
+  // Drop old v1.1 and current v1.2 blocks without deleting other scripts' cues.
+  var clean = before.replace(/\[JF11_BEGIN\][\s\S]*?\[JF11_END\]/g, '')
+                    .replace(/\[JF12_BEGIN\][\s\S]*?\[JF12_END\]/g, '');
+  // An incomplete old block can arise if a memory field was truncated.
+  var orphan = clean.search(/\[(?:JF11|JF12)_BEGIN\]/);
+  if (orphan >= 0) clean = clean.slice(0, orphan);
+  clean = clean.trim();
+  var cue = JF12_cue(v);
+  var result = clean ? clean + '\n\n' + cue : cue;
+  if (result !== before) state.memory.frontMemory = result;
+  if (result.length > 500) JF12_log('combined frontMemory is ' + result.length + ' characters; other script may be crowding it');
+}
+function JF12_prepare() {
+  var v = JF12_select();
+  if (v) JF12_memory(v);
+  return v;
+}
+function JF12_contextFallback(text, v) {
+  // Front Memory changes in Context may only affect the following turn.
+  // On normal (non-optimized) models, a conservative tail fallback gives the
+  // just-selected cue to the current generation when Input was bypassed.
+  // Optimized-context models may discard modified Context text. Our persistent
+  // frontMemory is still primed for the NEXT model call.
+  if (!v || !JF12_CONFIG.contextTailFallback || typeof text !== 'string') return text;
+  var marker = '[JF12_BEGIN]';
+  if (text.indexOf(marker) !== -1) return text;
+  var extra = '\n' + JF12_cue(v);
+  var max = (typeof info !== 'undefined' && typeof info.maxChars === 'number') ? info.maxChars : 0;
+  // Do not risk truncating existing context. If no reliable limit is supplied,
+  // preserve the original context unchanged; frontMemory supplies future turns.
+  if (!max || text.length + extra.length + 250 >= max) {
+    JF12_log('context lacks marker; tail fallback skipped for capacity/unknown maxChars');
+    return text;
+  }
+  JF12_log('context lacked cue: appended tail fallback (model may ignore on optimized context)');
+  return text + extra;
 }
