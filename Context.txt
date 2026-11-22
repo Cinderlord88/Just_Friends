@@ -1,8 +1,6 @@
-/* JUST FRIENDS — TEN REASONS v1.1.0 — CONTEXT */
+/* JUST FRIENDS — v1.2.0 CONTEXT: Continue and late-init fallback. */
 const modifier = (text) => {
-  const selected = JF11_select();
-  if (selected) JF11_applyMemory(selected);
-  // The cue is supplied through frontMemory, not a context-text rewrite.
-  return { text };
+  const v = JF12_prepare();
+  return { text: JF12_contextFallback(text, v) };
 };
 modifier(text);
